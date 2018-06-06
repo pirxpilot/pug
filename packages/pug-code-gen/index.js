@@ -154,11 +154,11 @@ Compiler.prototype = {
    */
 
   compile: function(){
-    this.ast = [];
+    var ast = [];
     if (this.pp) {
-      this.ast.push(t.variableDeclaration('var', [t.variableDeclarator(t.identifier('pug_indent'), t.arrayExpression())]));
+      ast.push(t.variableDeclaration('var', [t.variableDeclarator(t.identifier('pug_indent'), t.arrayExpression())]));
     }
-    this.visit(this.node);
+    ast = ast.concat(this.visit(this.node));
     if (!this.dynamicMixins) {
       // if there are no dynamic mixins we can remove any un-used mixins
       var mixinNames = Object.keys(this.mixins);
@@ -174,18 +174,17 @@ Compiler.prototype = {
     }
 
     
-    var ast;
     if (this.options.self) {
       ast = [
         t.variableDeclaration('var', [
           t.variableDeclarator(t.identifier('self'), t.logicalExpression('||', t.identifier('locals'), t.objectExpression([])))
         ])
-      ].concat(this.ast);
+      ].concat(ast);
     } else {
 
       // prepare block for babel-plugin-transform-with 
       var tplc = this.btpl_addWith();
-      ast = tplc({ SOURCE: this.ast })
+      ast = tplc({ SOURCE: ast })
       // bypass bug of babel-template preserveComments option (?)
       ast.leadingComments = tplc().leadingComments;
 
@@ -228,7 +227,7 @@ Compiler.prototype = {
 
     }
 
-    this.ast = t.functionDeclaration(
+    ast = t.functionDeclaration(
       t.identifier(this.options.templateName || 'template'),
       this.templateVars.map(function(v) { return t.identifier(v)}),
       t.blockStatement([this.ast_variableDeclaration()].concat(ast, this.ast_return()))
@@ -236,7 +235,7 @@ Compiler.prototype = {
 
 
     var file = babylon.parse('');
-    file.program.body = [this.ast];
+    file.program.body = [ast];
     var w = babel.transformFromAst(file, null, {
       code: false,
       plugins: [ babelPluginTransformWith ]
@@ -272,7 +271,7 @@ Compiler.prototype = {
   buffer: function (str) {
     var lit = this.ast_stringify(t.stringLiteral(str));
     var ast = this.ast_buffer(lit);
-    this.ast.push(ast);
+    return ast;
   },
 
   /**
@@ -288,7 +287,7 @@ Compiler.prototype = {
     }
     var body = this.parseExpr(src);
     var ast = this.ast_buffer(body);
-    this.ast.push(ast);
+    return ast;
   },
 
   /**
@@ -301,17 +300,19 @@ Compiler.prototype = {
    */
 
   prettyIndent: function(offset, newline){
+    var ast = [];
     offset = offset || 0;
     newline = newline ? '\n' : '';
-    this.buffer(newline + Array(this.indents + offset).join(this.pp));
+    ast.push(this.buffer(newline + Array(this.indents + offset).join(this.pp)));
     if (this.parentIndents) {
 
-      this.ast.push(this.ast_buffer(t.callExpression(
+      ast.push(this.ast_buffer(t.callExpression(
                                 t.memberExpression(t.identifier('pug_indent'), t.identifier('join')),
                                 [t.stringLiteral('')]
                               )));
 
     }
+    return ast;
   },
 
   /**
@@ -322,6 +323,7 @@ Compiler.prototype = {
    */
 
   visit: function(node, parent){
+    var ast = [];
     var debug = this.debug;
     if (!node) {
       var msg;
@@ -336,9 +338,9 @@ Compiler.prototype = {
 
     if (debug && node.debug !== false && node.type !== 'Block') {
       if (node.line) {
-        this.ast.push(t.expressionStatement(t.assignmentExpression('=', t.identifier('pug_debug_line'), t.numericLiteral(node.line))))
+        ast.push(t.expressionStatement(t.assignmentExpression('=', t.identifier('pug_debug_line'), t.numericLiteral(node.line))))
         if (node.filename) {
-          this.ast.push(t.expressionStatement(t.assignmentExpression('=', t.identifier('pug_debug_filename'), t.stringLiteral(node.filename))))
+          ast.push(t.expressionStatement(t.assignmentExpression('=', t.identifier('pug_debug_filename'), t.stringLiteral(node.filename))))
         }
       }
     }
@@ -367,7 +369,8 @@ Compiler.prototype = {
       throw new TypeError(msg);
     }
 
-    this.visitNode(node, parent);
+    ast = ast.concat(this.visitNode(node, parent));
+    return ast;
   },
 
   /**
@@ -389,13 +392,13 @@ Compiler.prototype = {
    */
 
   visitCase: function(node){
+    var ast = [];
     var expr = this.parseExpr(node.expr);
     var cases = [];
+    cases = cases.concat(this.visit(node.block, node));
     var s = t.switchStatement(expr, cases);
-    var savedAST = this.replaceAstBlock(cases);
-    this.visit(node.block, node);
-    this.replaceAstBlock(savedAST);
-    this.ast.push(s);
+    ast.push(s);
+    return ast;
   },
 
   /**
@@ -411,14 +414,12 @@ Compiler.prototype = {
       test = this.parseExpr(node.expr);
     }
     var consequent = []
-    var c = t.switchCase(test, consequent);
     if (node.block) {
-      var savedAST = this.replaceAstBlock(consequent);
-      this.visit(node.block, node);
-      this.ast.push(t.breakStatement());
-      this.replaceAstBlock(savedAST);
+      consequent = consequent.concat(this.visit(node.block, node));
+      consequent.push(t.breakStatement());
     }
-    this.ast.push(c);
+    var c = t.switchCase(test, consequent);
+    return [c];
   },
 
   /**
@@ -429,7 +430,7 @@ Compiler.prototype = {
    */
 
   visitLiteral: function(node){
-    this.buffer(node.str);
+    return [this.buffer(node.str)];
   },
 
   visitNamedBlock: function(block){
@@ -445,21 +446,22 @@ Compiler.prototype = {
   visitBlock: function(block){
     var escapePrettyMode = this.escapePrettyMode;
     var pp = this.pp;
-
+    var ast = [];
     // Pretty print multi-line text
     if (pp && block.nodes.length > 1 && !escapePrettyMode &&
         block.nodes[0].type === 'Text' && block.nodes[1].type === 'Text' ) {
-      this.prettyIndent(1, true);
+      ast = ast.concat(this.prettyIndent(1, true));
     }
     for (var i = 0; i < block.nodes.length; ++i) {
       // Pretty print text
       if (pp && i > 0 && !escapePrettyMode &&
           block.nodes[i].type === 'Text' && block.nodes[i-1].type === 'Text' &&
           /\n$/.test(block.nodes[i - 1].val)) {
-        this.prettyIndent(1, false);
+        ast = ast.concat(this.prettyIndent(1, false));
       }
-      this.visit(block.nodes[i], block);
+      ast = ast.concat(this.visit(block.nodes[i], block));
     }
+    return ast;
   },
 
   /**
@@ -470,24 +472,26 @@ Compiler.prototype = {
    */
 
   visitMixinBlock: function(block){
+    var ast = [];
     if (this.pp) {
-      this.ast.push(t.expressionStatement(t.callExpression(
+      ast.push(t.expressionStatement(t.callExpression(
         t.memberExpression(t.identifier('pug_indent'), t.identifier('push')),
         [t.stringLiteral(Array(this.indents + 1).join(this.pp))]
       )))
     }
-    this.ast.push(
-      t.logicalExpression('&&',
+    ast.push(
+      t.expressionStatement(t.logicalExpression('&&',
         t.identifier('block'),
         this.wrapCallExpression(t.callExpression(t.identifier('block'), []))
-      )
+      ))
     );
     if (this.pp) {
-      this.ast.push(t.expressionStatement(t.callExpression(
+      ast.push(t.expressionStatement(t.callExpression(
         t.memberExpression(t.identifier('pug_indent'), t.identifier('pop')),
         []
       )))
     }
+    return ast;
   },
 
   /**
@@ -500,12 +504,14 @@ Compiler.prototype = {
    */
 
   visitDoctype: function(doctype){
+    var ast = [];
     if (doctype && (doctype.val || !this.doctype)) {
       this.setDoctype(doctype.val || 'html');
     }
 
-    if (this.doctype) this.buffer(this.doctype);
+    if (this.doctype) ast.push(this.buffer(this.doctype));
     this.hasCompiledDoctype = true;
+    return ast;
   },
 
   /**
@@ -517,6 +523,7 @@ Compiler.prototype = {
    */
 
   visitMixin: function(mixin){
+    var ast = [];
     var self = this;
     var name = 'pug_mixins[';
     var args = mixin.args || '';
@@ -534,7 +541,7 @@ Compiler.prototype = {
     if (mixin.call) {
       this.mixins[key].used = true;
       if (pp) {
-        this.ast.push(t.expressionStatement(t.callExpression(
+        ast.push(t.expressionStatement(t.callExpression(
           t.memberExpression(t.identifier('pug_indent'), t.identifier('push')),
           [t.stringLiteral(Array(this.indents + 1).join(pp))]
         )))
@@ -542,7 +549,7 @@ Compiler.prototype = {
       if (block || attrs.length || attrsBlocks.length) {
 
         var astArgs = []
-        this.ast.push(
+        ast.push(
           t.expressionStatement(this.wrapCallExpression(t.callExpression(
             t.memberExpression(
               t.memberExpression(t.identifier('pug_mixins'), mixinName, true),
@@ -561,6 +568,15 @@ Compiler.prototype = {
 
         if (block) {
           var astFunc = [];
+        
+          // Render block with no indents, dynamically added when rendered
+          this.parentIndents++;
+          var _indents = this.indents;
+          this.indents = 0;
+          astFunc = astFunc.concat(this.visit(mixin.block, mixin));
+          this.indents = _indents;
+          this.parentIndents--;
+
           astKey.push(t.objectProperty(
             t.identifier('block'),
             t.functionExpression(
@@ -570,17 +586,7 @@ Compiler.prototype = {
               this.useGenerators
             )
           ));
-        
-          // Render block with no indents, dynamically added when rendered
-          this.parentIndents++;
-          var _indents = this.indents;
-          this.indents = 0;
-          var savedAST = this.replaceAstBlock(astFunc);
-          this.visit(mixin.block, mixin);
-          this.replaceAstBlock(savedAST);
-          this.indents = _indents;
-          this.parentIndents--;
-
+ 
         }
 
         if (attrsBlocks.length) {
@@ -617,13 +623,13 @@ Compiler.prototype = {
 
       } else {
         var astArgs = this.parseArgs(args);
-        this.ast.push(t.expressionStatement(this.wrapCallExpression(t.callExpression(
+        ast.push(t.expressionStatement(this.wrapCallExpression(t.callExpression(
           t.memberExpression(t.identifier('pug_mixins'), mixinName, true),
           astArgs
         ))));
       }
       if (pp) {
-        this.ast.push(t.expressionStatement(t.callExpression(
+        ast.push(t.expressionStatement(t.callExpression(
           t.memberExpression(t.identifier('pug_indent'), t.identifier('pop')),
           []
         )))
@@ -639,24 +645,7 @@ Compiler.prototype = {
       // we need use pug_interp here for v8: https://code.google.com/p/v8/issues/detail?id=4165
       // once fixed, use this: this.buf.push(name + ' = function(' + args.join(',') + '){');
       var astMixin = [];
-      var mixinStmt = 
-        t.expressionStatement(
-          t.assignmentExpression(
-            '=',
-            t.memberExpression(t.identifier('pug_mixins'), mixinName, true),
-            t.assignmentExpression(
-              '=',
-              t.identifier('pug_interp'),
-              t.functionExpression(
-                null,
-                astArgs,
-                t.blockStatement(astMixin),
-                this.useGenerators
-              )
-            )
-          )
-        );
-      this.ast.push(mixinStmt);
+
       astMixin.push(
         t.variableDeclaration('var', [
           t.variableDeclarator(
@@ -698,18 +687,34 @@ Compiler.prototype = {
       }
 
       this.parentIndents++;
-      var savedAST = this.replaceAstBlock(astMixin);
-      this.visit(block, mixin);
-      this.replaceAstBlock(savedAST);
+      astMixin = astMixin.concat(this.visit(block, mixin));
       this.parentIndents--;
+
+
+      var mixinStmt = 
+        t.expressionStatement(
+          t.assignmentExpression(
+            '=',
+            t.memberExpression(t.identifier('pug_mixins'), mixinName, true),
+            t.assignmentExpression(
+              '=',
+              t.identifier('pug_interp'),
+              t.functionExpression(
+                null,
+                astArgs,
+                t.blockStatement(astMixin),
+                this.useGenerators
+              )
+            )
+          )
+        );
+      ast.push(mixinStmt);
+ 
+
 
       this.mixins[key].instances.push({stmt: mixinStmt});
     }
-  },
-  replaceAstBlock: function(newBlock) {
-    var tmp = this.ast;
-    this.ast = newBlock;
-    return tmp;
+    return ast;
   },
 
   /**
@@ -726,31 +731,32 @@ Compiler.prototype = {
     var name = tag.name
       , pp = this.pp
       , self = this;
+    var ast = [];
 
     function bufferName() {
-      if (interpolated) self.bufferExpression(tag.expr);
-      else self.buffer(name);
+      if (interpolated) return self.bufferExpression(tag.expr);
+      else return self.buffer(name);
     }
 
     if (WHITE_SPACE_SENSITIVE_TAGS[tag.name] === true) this.escapePrettyMode = true;
 
     if (!this.hasCompiledTag) {
       if (!this.hasCompiledDoctype && 'html' == name) {
-        this.visitDoctype();
+        ast = ast.concat(this.visitDoctype());
       }
       this.hasCompiledTag = true;
     }
     // pretty print
     if (pp && !tag.isInline)
-      this.prettyIndent(0, true);
+      ast = ast.concat(this.prettyIndent(0, true));
     if (tag.selfClosing || (!this.xml && selfClosing[tag.name])) {
-      this.buffer('<');
-      bufferName();
-      this.visitAttributes(tag.attrs, this.attributeBlocks(tag.attributeBlocks));
+      ast.push(this.buffer('<'));
+      ast.push(bufferName());
+      ast = ast.concat(this.visitAttributes(tag.attrs, this.attributeBlocks(tag.attributeBlocks)));
       if (this.terse && !tag.selfClosing) {
-        this.buffer('>');
+        ast.push(this.buffer('>'));
       } else {
-        this.buffer('/>');
+        ast.push(this.buffer('/>'));
       }
       // if it is non-empty throw an error
       if (tag.code ||
@@ -763,25 +769,26 @@ Compiler.prototype = {
       }
     } else {
       // Optimize attributes buffering
-      this.buffer('<');
-      bufferName();
-      this.visitAttributes(tag.attrs, this.attributeBlocks(tag.attributeBlocks));
-      this.buffer('>');
-      if (tag.code) this.visitCode(tag.code);
-      this.visit(tag.block, tag);
+      ast.push(this.buffer('<'));
+      ast.push(bufferName());
+      ast = ast.concat(this.visitAttributes(tag.attrs, this.attributeBlocks(tag.attributeBlocks)));
+      ast.push(this.buffer('>'));
+      if (tag.code) ast = ast.concat(this.visitCode(tag.code));
+      ast = ast.concat(this.visit(tag.block, tag));
 
       // pretty print
       if (pp && !tag.isInline && WHITE_SPACE_SENSITIVE_TAGS[tag.name] !== true && !tagCanInline(tag))
-        this.prettyIndent(0, true);
+        ast = ast.concat(this.prettyIndent(0, true));
 
-      this.buffer('</');
-      bufferName();
-      this.buffer('>');
+      ast.push(this.buffer('</'));
+      ast.push(bufferName());
+      ast.push(this.buffer('>'));
     }
 
     if (WHITE_SPACE_SENSITIVE_TAGS[tag.name] === true) this.escapePrettyMode = false;
 
     this.indents--;
+    return ast;
   },
 
   /**
@@ -811,7 +818,7 @@ Compiler.prototype = {
    */
 
   visitText: function(text){
-    this.buffer(text.val);
+    return this.buffer(text.val);
   },
 
   /**
@@ -822,9 +829,11 @@ Compiler.prototype = {
    */
 
   visitComment: function(comment){
+    var ast = [];
     if (!comment.buffer) return;
-    if (this.pp) this.prettyIndent(1, true);
-    this.buffer('<!--' + comment.val + '-->');
+    if (this.pp) ast = ast.concat(this.prettyIndent(1, true));
+    ast.push(this.buffer('<!--' + comment.val + '-->'));
+    return ast;
   },
 
   /**
@@ -836,7 +845,9 @@ Compiler.prototype = {
    * @api public
    */
 
-  visitYieldBlock: function(block) {},
+  visitYieldBlock: function(block) {
+    return [];
+  },
 
   /**
    * Visit a `BlockComment`.
@@ -846,12 +857,14 @@ Compiler.prototype = {
    */
 
   visitBlockComment: function(comment){
+    var ast = [];
     if (!comment.buffer) return;
-    if (this.pp) this.prettyIndent(1, true);
-    this.buffer('<!--' + (comment.val || ''));
-    this.visit(comment.block, comment);
-    if (this.pp) this.prettyIndent(1, true);
-    this.buffer('-->');
+    if (this.pp) ast = ast.concat(this.prettyIndent(1, true));
+    ast.push(this.buffer('<!--' + (comment.val || '')));
+    ast = ast.concat(this.visit(comment.block, comment));
+    if (this.pp) ast = ast.concat(this.prettyIndent(1, true));
+    ast.push(this.buffer('-->'));
+    return ast;
   },
 
   /**
@@ -869,11 +882,12 @@ Compiler.prototype = {
     // since they are usually flow control
     // Buffer code
     //
+    var ast = [];
     if (code.buffer) {
       var val = code.val.trim();
       val = 'null == (pug_interp = '+val+') ? "" : pug_interp';
       if (code.mustEscape !== false) val = this.runtime('escape') + '(' + val + ')';
-      this.bufferExpression(val);
+      ast.push(this.bufferExpression(val));
     } else {
 
       var val = code.val.trim();
@@ -881,10 +895,8 @@ Compiler.prototype = {
 
       if (code.block) {
         this.codeIndex++;
-        this.codeBuffer += "\n{" + "PUGMARKER"+this.codeIndex + "}\n";
-        this.codeMarker["PUGMARKER"+this.codeIndex] = [];
-        var savedAST = this.replaceAstBlock(this.codeMarker["PUGMARKER"+this.codeIndex]);
-
+        var marker = "PUGMARKER"+this.codeIndex;
+        this.codeBuffer += "\n{" + marker + "}\n";
         // snaphsot current unbuffered code level
         // this is necessary to accept embedded code blocks
         // - if (true) {
@@ -895,17 +907,18 @@ Compiler.prototype = {
         var savedCodeBuffer = this.codeBuffer;
         var savedCodeMarker = this.codeMarker;
         var savedCodeIndex = this.codeIndex;
+
         this.codeBuffer = '_=function*(){';
         this.codeMarker = {};
         this.codeIndex = -1;
 
-        this.visit(code.block, code);
-        
+        var body = [].concat(this.visit(code.block, code));
+
         this.codeBuffer = savedCodeBuffer;
         this.codeMarker = savedCodeMarker;
         this.codeIndex = savedCodeIndex;
-        
-        this.replaceAstBlock(savedAST);
+       
+        this.codeMarker[marker] = body; 
       }
 
       var idx = ctx.nodes.indexOf(code) + 1;
@@ -913,8 +926,7 @@ Compiler.prototype = {
         try {
           var src = this.codeBuffer + '}';
           var tpl = babelTemplate(src);
-          var ast = tpl(this.codeMarker);
-          Array.prototype.push.apply(this.ast, ast.expression.right.body.body);
+          ast = ast.concat(tpl(this.codeMarker).expression.right.body.body);
           this.codeBuffer = '_=function*(){';
           this.codeIndex = -1;
           this.codeMarker = {};
@@ -925,6 +937,7 @@ Compiler.prototype = {
       }
 
     }
+    return ast;
   },
 
   /**
@@ -937,28 +950,22 @@ Compiler.prototype = {
   visitConditional: function(cond){
     var test = cond.test;
 
-    var blockConsequent = [];
+    var blockConsequent = [].concat(this.visit(cond.consequent, cond));
     var c = t.ifStatement(
       this.parseExpr(test),
       t.blockStatement(blockConsequent)
     );
 
-    var savedAST = this.replaceAstBlock(blockConsequent);
-    this.visit(cond.consequent, cond);
 
     if (cond.alternate) {
       if (cond.alternate.type === 'Conditional') {
-        this.ast = [];
         c.alternate = this.visitConditional(cond.alternate);
       } else {
         var blockAlternate = [];
+        blockAlternate = blockAlternate.concat(this.visit(cond.alternate, cond));
         c.alternate = t.blockStatement(blockAlternate);
-        this.replaceAstBlock(blockAlternate);
-        this.visit(cond.alternate, cond);
       }
     }
-    this.replaceAstBlock(savedAST);
-    this.ast.push(c);
     return c;
   },
 
@@ -972,14 +979,12 @@ Compiler.prototype = {
   visitWhile: function(loop){
     var test = loop.test;
     var whileBlock = [];
-    this.ast.push(t.whileStatement(
+    whileBlock = whileBlock.concat(this.visit(loop.block, loop));
+    var w = t.whileStatement(
       this.parseExpr(test),
       t.blockStatement(whileBlock)
-    ));
-
-    var savedAST = this.replaceAstBlock(whileBlock);
-    this.visit(loop.block, loop);
-    this.replaceAstBlock(savedAST);
+    );
+    return [w];
   },
 
   /**
@@ -990,6 +995,7 @@ Compiler.prototype = {
    */
 
   visitEach: function(each){
+    var ast = [];
     var indexVarName = each.key || 'pug_index' + this.eachCount;
     this.eachCount++;
 
@@ -1014,7 +1020,7 @@ Compiler.prototype = {
                     ,[t.thisExpression()]
                   ))
                 )
-    this.ast.push(func)
+    ast.push(func)
 
 
       var blockEach = [
@@ -1024,6 +1030,7 @@ Compiler.prototype = {
       ];
       var blockAlt = [];
  
+      blockEach = blockEach.concat(this.visit(each.block, each));
       var arrayLoop = 
           t.blockStatement([t.forStatement(
             t.variableDeclaration('var', [
@@ -1044,6 +1051,7 @@ Compiler.prototype = {
       ]
       var blockObjAlt = [];
 
+      blockObj = blockObj.concat(this.visit(each.block, each));
       var objectLoop = t.blockStatement([
         t.variableDeclaration('var', [
           t.variableDeclarator(t.identifier('$$l'), t.numericLiteral(0))
@@ -1057,17 +1065,11 @@ Compiler.prototype = {
         )
       ])
 
-    var savedAST = this.replaceAstBlock(blockEach);
-    this.visit(each.block, each);
-    
-    this.replaceAstBlock(blockObj);
-    this.visit(each.block, each);
 
 
     if (each.alternate) {
-      this.replaceAstBlock(blockAlt);
-      this.visit(each.alternate, each);
-       arrayLoop = t.ifStatement(
+      blockAlt = blockAlt.concat(this.visit(each.alternate, each));
+      arrayLoop = t.ifStatement(
         t.memberExpression(t.identifier('$$obj'), t.identifier('length')),
         arrayLoop,
         t.blockStatement(blockAlt)
@@ -1076,12 +1078,11 @@ Compiler.prototype = {
 
 
     if (each.alternate) {
+      blockObjAlt = blockObjAlt.concat(this.visit(each.alternate, each));
       objectLoop.body.push(t.ifStatement(
             t.binaryExpression('===', t.identifier('$$l'), t.numericLiteral(0)),
             t.blockStatement(blockObjAlt)
       ))
-      this.replaceAstBlock(blockObjAlt);
-      this.visit(each.alternate, each);
     }
 
     var it = t.ifStatement(
@@ -1089,8 +1090,8 @@ Compiler.prototype = {
         arrayLoop, objectLoop)
     body.push(it);
 
+    return ast;
 
-    this.replaceAstBlock(savedAST);
   },
 
   /**
@@ -1101,19 +1102,21 @@ Compiler.prototype = {
    */
 
   visitAttributes: function(attrs, attributeBlocks){
+    var ast = [];
     if (attributeBlocks.length) {
       if (attrs.length) {
         var val = this.attrs(attrs);
         attributeBlocks.unshift(val);
       }
       if (attributeBlocks.length > 1) {
-        this.bufferExpression(this.runtime('attrs') + '(' + this.runtime('merge') + '([' + attributeBlocks.join(',') + ']), ' + stringify(this.terse) + ')');
+        ast.push(this.bufferExpression(this.runtime('attrs') + '(' + this.runtime('merge') + '([' + attributeBlocks.join(',') + ']), ' + stringify(this.terse) + ')'));
       } else {
-        this.bufferExpression(this.runtime('attrs') + '(' + attributeBlocks[0] + ', ' + stringify(this.terse) + ')');
+        ast.push(this.bufferExpression(this.runtime('attrs') + '(' + attributeBlocks[0] + ', ' + stringify(this.terse) + ')'));
       }
     } else if (attrs.length) {
-      this.attrs(attrs, true);
+      ast.push(this.bufferExpression(this.attrs(attrs, true)));
     }
+    return ast;
   },
 
   /**
@@ -1126,9 +1129,6 @@ Compiler.prototype = {
       format: buffer ? 'html' : 'object',
       runtime: this.runtime.bind(this)
     });
-    if (buffer)  {
-      this.bufferExpression(res);
-    }
     return res;
   }
 };
