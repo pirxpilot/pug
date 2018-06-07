@@ -1,7 +1,7 @@
 'use strict';
 
 var assert = require('assert');
-var isExpression = require('is-expression');
+var babylon = require('babylon');
 var characterParser = require('character-parser');
 var error = require('pug-error');
 
@@ -64,17 +64,14 @@ Lexer.prototype = {
     if (!value) this.error('ASSERT_FAILED', message);
   },
 
-  isExpression: function (exp) {
-    return isExpression(exp, {
-      throw: true
-    });
+  parseExpression: function (exp) {
+    return babylon.parseExpression(exp);
   },
 
   assertExpression: function (exp, noThrow) {
     //this verifies that a JavaScript expression is valid
     try {
-      this.callLexerFunction('isExpression', exp);
-      return true;
+      return this.callLexerFunction('parseExpression', exp);
     } catch (ex) {
       if (noThrow) return false;
 
@@ -106,7 +103,7 @@ Lexer.prototype = {
    * @api private
    */
 
-  tok: function(type, val){
+  tok: function(type, val, ast){
     var res = {
       type: type, 
       loc: {
@@ -119,6 +116,7 @@ Lexer.prototype = {
     };
 
     if (val !== undefined) res.val = val;
+    if (ast !== undefined) res.ast = ast;
 
     return res;
   },
@@ -345,13 +343,14 @@ Lexer.prototype = {
    */
 
   interpolation: function() {
+    var ast;
     if (/^#\{/.test(this.input)) {
       var match = this.bracketExpression(1);
       this.consume(match.end + 1);
-      var tok = this.tok('interpolation', match.src);
+      ast = this.assertExpression(match.src);
+      var tok = this.tok('interpolation', match.src, ast);
       this.tokens.push(tok);
       this.incrementColumn(2); // '#{'
-      this.assertExpression(match.src);
 
       var splitted = match.src.split('\n');
       var lines = splitted.length - 1;
@@ -929,11 +928,11 @@ Lexer.prototype = {
    */
 
   "while": function() {
-    var captures, tok;
+    var captures, ast, tok;
     if (captures = /^while +([^\n]+)/.exec(this.input)) {
       this.consume(captures[0].length);
-      this.assertExpression(captures[1]);
-      tok = this.tok('while', captures[1]);
+      ast = this.assertExpression(captures[1]);
+      tok = this.tok('while', captures[1], ast);
       this.incrementColumn(captures[0].length);
       this.tokens.push(this.tokEnd(tok));
       return true;

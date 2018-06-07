@@ -35785,6 +35785,23 @@ Array [
     "val": 2,
   },
   Object {
+    "ast": Object {
+      "end": 3,
+      "loc": Object {
+        "end": Object {
+          "column": 3,
+          "line": 1,
+        },
+        "identifierName": "tag",
+        "start": Object {
+          "column": 0,
+          "line": 1,
+        },
+      },
+      "name": "tag",
+      "start": 0,
+      "type": "Identifier",
+    },
     "loc": Object {
       "end": Object {
         "column": 9,
@@ -40229,6 +40246,23 @@ Array [
     "type": "newline",
   },
   Object {
+    "ast": Object {
+      "end": 3,
+      "loc": Object {
+        "end": Object {
+          "column": 3,
+          "line": 1,
+        },
+        "identifierName": "tag",
+        "start": Object {
+          "column": 0,
+          "line": 1,
+        },
+      },
+      "name": "tag",
+      "start": 0,
+      "type": "Identifier",
+    },
     "loc": Object {
       "end": Object {
         "column": 7,
@@ -40273,6 +40307,23 @@ Array [
     "type": "newline",
   },
   Object {
+    "ast": Object {
+      "end": 3,
+      "loc": Object {
+        "end": Object {
+          "column": 3,
+          "line": 1,
+        },
+        "identifierName": "tag",
+        "start": Object {
+          "column": 0,
+          "line": 1,
+        },
+      },
+      "name": "tag",
+      "start": 0,
+      "type": "Identifier",
+    },
     "loc": Object {
       "end": Object {
         "column": 7,
@@ -40362,6 +40413,78 @@ Array [
     "type": "newline",
   },
   Object {
+    "ast": Object {
+      "alternate": Object {
+        "end": 16,
+        "extra": Object {
+          "raw": "\'li\'",
+          "rawValue": "li",
+        },
+        "loc": Object {
+          "end": Object {
+            "column": 16,
+            "line": 1,
+          },
+          "start": Object {
+            "column": 12,
+            "line": 1,
+          },
+        },
+        "start": 12,
+        "type": "StringLiteral",
+        "value": "li",
+      },
+      "consequent": Object {
+        "end": 9,
+        "extra": Object {
+          "raw": "\'a\'",
+          "rawValue": "a",
+        },
+        "loc": Object {
+          "end": Object {
+            "column": 9,
+            "line": 1,
+          },
+          "start": Object {
+            "column": 6,
+            "line": 1,
+          },
+        },
+        "start": 6,
+        "type": "StringLiteral",
+        "value": "a",
+      },
+      "end": 16,
+      "loc": Object {
+        "end": Object {
+          "column": 16,
+          "line": 1,
+        },
+        "start": Object {
+          "column": 0,
+          "line": 1,
+        },
+      },
+      "start": 0,
+      "test": Object {
+        "end": 3,
+        "loc": Object {
+          "end": Object {
+            "column": 3,
+            "line": 1,
+          },
+          "identifierName": "foo",
+          "start": Object {
+            "column": 0,
+            "line": 1,
+          },
+        },
+        "name": "foo",
+        "start": 0,
+        "type": "Identifier",
+      },
+      "type": "ConditionalExpression",
+    },
     "loc": Object {
       "end": Object {
         "column": 20,
@@ -41790,6 +41913,26 @@ Array [
     "type": "newline",
   },
   Object {
+    "ast": Object {
+      "end": 5,
+      "extra": Object {
+        "raw": "\'foo\'",
+        "rawValue": "foo",
+      },
+      "loc": Object {
+        "end": Object {
+          "column": 5,
+          "line": 1,
+        },
+        "start": Object {
+          "column": 0,
+          "line": 1,
+        },
+      },
+      "start": 0,
+      "type": "StringLiteral",
+      "value": "foo",
+    },
     "loc": Object {
       "end": Object {
         "column": 11,
@@ -41833,6 +41976,26 @@ Array [
     "type": "newline",
   },
   Object {
+    "ast": Object {
+      "end": 5,
+      "extra": Object {
+        "raw": "\'foo\'",
+        "rawValue": "foo",
+      },
+      "loc": Object {
+        "end": Object {
+          "column": 5,
+          "line": 1,
+        },
+        "start": Object {
+          "column": 0,
+          "line": 1,
+        },
+      },
+      "start": 0,
+      "type": "StringLiteral",
+      "value": "foo",
+    },
     "loc": Object {
       "end": Object {
         "column": 11,
@@ -41921,6 +42084,26 @@ Array [
     "type": "newline",
   },
   Object {
+    "ast": Object {
+      "end": 5,
+      "extra": Object {
+        "raw": "\'foo\'",
+        "rawValue": "foo",
+      },
+      "loc": Object {
+        "end": Object {
+          "column": 5,
+          "line": 1,
+        },
+        "start": Object {
+          "column": 0,
+          "line": 1,
+        },
+      },
+      "start": 0,
+      "type": "StringLiteral",
+      "value": "foo",
+    },
     "loc": Object {
       "end": Object {
         "column": 11,
@@ -41965,6 +42148,26 @@ Array [
     "type": "newline",
   },
   Object {
+    "ast": Object {
+      "end": 5,
+      "extra": Object {
+        "raw": "\'foo\'",
+        "rawValue": "foo",
+      },
+      "loc": Object {
+        "end": Object {
+          "column": 5,
+          "line": 1,
+        },
+        "start": Object {
+          "column": 0,
+          "line": 1,
+        },
+      },
+      "start": 0,
+      "type": "StringLiteral",
+      "value": "foo",
+    },
     "loc": Object {
       "end": Object {
         "column": 11,
@@ -42202,6 +42405,26 @@ Array [
     "type": "newline",
   },
   Object {
+    "ast": Object {
+      "end": 10,
+      "extra": Object {
+        "raw": "\'foo\'",
+        "rawValue": "foo",
+      },
+      "loc": Object {
+        "end": Object {
+          "column": 9,
+          "line": 2,
+        },
+        "start": Object {
+          "column": 4,
+          "line": 2,
+        },
+      },
+      "start": 5,
+      "type": "StringLiteral",
+      "value": "foo",
+    },
     "loc": Object {
       "end": Object {
         "column": 4,
@@ -44585,6 +44808,59 @@ Array [
     "val": 2,
   },
   Object {
+    "ast": Object {
+      "end": 6,
+      "left": Object {
+        "end": 1,
+        "loc": Object {
+          "end": Object {
+            "column": 1,
+            "line": 1,
+          },
+          "identifierName": "x",
+          "start": Object {
+            "column": 0,
+            "line": 1,
+          },
+        },
+        "name": "x",
+        "start": 0,
+        "type": "Identifier",
+      },
+      "loc": Object {
+        "end": Object {
+          "column": 6,
+          "line": 1,
+        },
+        "start": Object {
+          "column": 0,
+          "line": 1,
+        },
+      },
+      "operator": "<",
+      "right": Object {
+        "end": 6,
+        "extra": Object {
+          "raw": "10",
+          "rawValue": 10,
+        },
+        "loc": Object {
+          "end": Object {
+            "column": 6,
+            "line": 1,
+          },
+          "start": Object {
+            "column": 4,
+            "line": 1,
+          },
+        },
+        "start": 4,
+        "type": "NumericLiteral",
+        "value": 10,
+      },
+      "start": 0,
+      "type": "BinaryExpression",
+    },
     "loc": Object {
       "end": Object {
         "column": 15,
