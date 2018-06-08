@@ -296,6 +296,7 @@ Parser.prototype = {
             tags.push({
               type: 'Code',
               val: tok.val,
+              astVal: tok.ast,
               buffer: tok.buffer,
               mustEscape: tok.mustEscape !== false,
               isInline: true,
@@ -410,6 +411,7 @@ loop:
     var node = {
       type: 'Case',
       expr: tok.val,
+      astExpr: tok.ast,
       line: tok.loc.start.line,
       column: tok.loc.start.column,
       filename: this.filename
@@ -453,6 +455,7 @@ loop:
       return {
         type: 'When',
         expr: tok.val,
+        astExpr: tok.ast,
         block: this.parseBlockExpansion(),
         debug: false,
         line: tok.loc.start.line,
@@ -463,6 +466,7 @@ loop:
       return {
         type: 'When',
         expr: tok.val,
+        astExpr: tok.ast,
         debug: false,
         line: tok.loc.start.line,
         column: tok.loc.start.column,
@@ -498,6 +502,7 @@ loop:
     var node = {
       type: 'Code',
       val: tok.val,
+      astVal: tok.ast,
       buffer: tok.buffer,
       mustEscape: tok.mustEscape !== false,
       isInline: !!noBlock,
@@ -528,6 +533,7 @@ loop:
     var node = {
       type: 'Conditional',
       test: tok.val,
+      astTest: tok.ast,
       consequent: this.emptyBlock(tok.loc.start.line),
       alternate: null,
       line: tok.loc.start.line,
@@ -550,6 +556,7 @@ loop:
           currentNode.alternate = {
             type: 'Conditional',
             test: tok.val,
+            astTest: tok.ast,
             consequent: this.emptyBlock(tok.loc.start.line),
             alternate: null,
             line: tok.loc.start.line,
@@ -578,7 +585,7 @@ loop:
     var node = {
       type: 'While',
       test: tok.val,
-      ast: tok.ast,
+      astTest: tok.ast,
       line: tok.loc.start.line,
       column: tok.loc.start.column,
       filename: this.filename
@@ -748,6 +755,7 @@ loop:
     var node = {
       type: 'Each',
       obj: tok.code,
+      astObj: tok.ast,
       val: tok.val,
       key: tok.key,
       block: this.block(),
@@ -879,7 +887,9 @@ loop:
     var mixin = {
       type: 'Mixin',
       name: name,
+      astName: tok.ast,
       args: args,
+      astArgs: tok.ast_args,
       block: this.emptyBlock(tok.loc.start.line),
       call: true,
       attrs: [],
@@ -906,13 +916,13 @@ loop:
     var tok = this.expect('mixin');
     var name = tok.val;
     var args = tok.args;
-
     if ('indent' == this.peek().type) {
       this.inMixin++;
       var mixin = {
         type: 'Mixin',
         name: name,
         args: args,
+        astArgs: tok.ast_args,
         block: this.block(),
         call: false,
         line: tok.loc.start.line,
@@ -1015,7 +1025,7 @@ loop:
     var tag = {
       type: 'InterpolatedTag',
       expr: tok.val,
-      ast: tok.ast,
+      astExpr: tok.ast,
       selfClosing: false,
       block: this.emptyBlock(tok.loc.start.line),
       attrs: [],
