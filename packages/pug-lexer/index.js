@@ -74,8 +74,7 @@ Lexer.prototype = {
       return this.callLexerFunction('parseExpression', exp);
     } catch (ex) {
       if (noThrow) return false;
-
-      // not coming from acorn
+      
       if (!ex.loc) throw ex;
 
       this.incrementLine(ex.loc.line - 1);
