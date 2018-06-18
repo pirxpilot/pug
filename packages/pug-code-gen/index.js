@@ -121,13 +121,6 @@ Compiler.prototype = {
   parseArgs: function(args) {
     return babylon.parse("a("+args+")").program.body.pop().expression.arguments;
   },
-  btpl_addWith: function() {
-    var globals = this.options.globals ? this.options.globals.concat(INTERNAL_VARIABLES) : INTERNAL_VARIABLES;
-    globals.concat(this.runtimeFunctionsUsed.map(function (name) { return 'pug_' + name; }));
-    var tpl = "// @with exclude: "+ globals.join(",") +"\n{\nlocals || {};\nSOURCE;\n}"
-    var tplc = babelTemplate(tpl, { preserveComments: true });
-    return tplc;
-  },
   ast_variableDeclaration: function() {
     return t.variableDeclaration('var', [
           t.variableDeclarator(t.identifier('pug_html'), t.stringLiteral('')),
@@ -186,14 +179,7 @@ Compiler.prototype = {
         ])
       ].concat(ast);
     } else {
-
-      // prepare block for babel-plugin-transform-with 
-      var tplc = this.btpl_addWith();
-      ast = tplc({ SOURCE: ast })
-      // bypass bug of babel-template preserveComments option (?)
-      ast.leadingComments = tplc().leadingComments;
-
-      ast = [ast];
+      ast = [t.withStatement(t.identifier('locals'), t.blockStatement(ast))]
     }
 
 
@@ -239,16 +225,18 @@ Compiler.prototype = {
     )
 
 
+    var plugins = [ babelPluginPugConcat ];
+    if (!this.options.self) {
+      let globals = this.options.globals ? this.options.globals.concat(INTERNAL_VARIABLES) : INTERNAL_VARIABLES;
+      globals.concat(this.runtimeFunctionsUsed.map(function (name) { return 'pug_' + name; }));
+      plugins.push([babelPluginTransformWith, { exclude: globals }]);
+    }
     var file = babylon.parse('');
     file.program.body = [ast];
     var w = babel.transformFromAst(file, null, {
       code: false,
-      plugins: [
-        babelPluginPugConcat,
-        babelPluginTransformWith
-      ]
+      plugins: plugins
     });
-
 
     return buildRuntime(this.runtimeFunctionsUsed) + gen.default(w.ast).code;
   },
