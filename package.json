@@ -16,13 +16,9 @@
   "license": "MIT",
   "repository": "pirxpilot/pug",
   "main": "lib",
-  "bin": {
-    "jade": "./bin/jade.js"
-  },
   "dependencies": {
     "character-parser": "1.2.2",
     "clean-css": "^3.4.21",
-    "commander": "~2.9.0",
     "constantinople": "~3.1.0",
     "jstransformer": "1.0.0",
     "jstransformer-markdown": "^1.1.1",
