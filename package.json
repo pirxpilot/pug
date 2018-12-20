@@ -82,5 +82,8 @@
     "fs": false,
     "./lib/filters.js": "./lib/filters-client.js"
   },
+  "files": [
+    "lib"
+  ],
   "homepage": "http://github.com/jnordberg/jade-legacy"
 }
