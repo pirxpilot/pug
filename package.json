@@ -66,11 +66,6 @@
     "twbs": "0.0.6",
     "uglify-js": "*"
   },
-  "component": {
-    "scripts": {
-      "jade": "runtime.js"
-    }
-  },
   "scripts": {
     "test": "mocha -R spec",
     "precoverage": "rimraf coverage && rimraf cov-pt*",
