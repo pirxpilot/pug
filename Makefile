@@ -5,6 +5,9 @@ check: test
 test:
 	$(NODE_BIN)/mocha
 
+bench:
+	node support/benchmark
+
 clean:
 	rm -rf test/output test/temp
 
