@@ -1,4 +1,10 @@
 
+1.12.1 / 2018-12-20
+===================
+
+ * remove unused rimraf dependency
+ * remove unused mkdirp dependency
+
 1.12.0 / 2018-12-20
 ===================
 
