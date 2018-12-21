@@ -1,3 +1,17 @@
+
+1.12.0 / 2018-12-20
+===================
+
+ * rename to @pirxpilot/jade-core
+ * add Makefile
+ * update dependencies
+ * use jstransformer to implement minimize in filters
+ * remove release script
+ * remove command line
+ * remove examples and docs
+ * remove build result
+ * remove component support
+
 1.11.0 / 2015-06-12
 ==================
 
