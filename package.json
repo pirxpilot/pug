@@ -32,7 +32,6 @@
     "jstransformer-uglify-js": "^1.2.0",
     "jstransformer-verbatim": "^1.0.0",
     "mocha": "*",
-    "rimraf": "^2.6.2",
     "should": "*",
     "uglify-js": "~2",
     "uubench": "^0.0.1"
