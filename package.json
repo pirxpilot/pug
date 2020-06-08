@@ -17,11 +17,11 @@
   "repository": "pirxpilot/pug",
   "main": "lib",
   "dependencies": {
-    "character-parser": "1.2.2",
-    "constantinople": "~3.1.0",
-    "jstransformer": "1.0.0",
+    "character-parser": "^1.2.2",
+    "constantinople": "^4.0.0",
+    "jstransformer": "^1.0.0",
     "void-elements": "~3.1.0",
-    "with": "~6.0.0"
+    "with": "^7.0.0"
   },
   "devDependencies": {
     "jstransformer-cdata": "^1.0.0",
